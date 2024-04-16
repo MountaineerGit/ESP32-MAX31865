@@ -40,6 +40,12 @@ enum class Max31865Error : uint8_t {
   RTDHigh
 };
 
+enum class SensorType : uint8_t
+{
+  PT1000 = 0,
+  KTY81_210
+};
+
 struct max31865_config_t {
   bool vbias;
   bool autoConversion;
@@ -51,6 +57,7 @@ struct max31865_config_t {
 struct max31865_rtd_config_t {
   float ref;
   float nominal;
+  SensorType sensor_type;
 };
 
 class Max31865 {

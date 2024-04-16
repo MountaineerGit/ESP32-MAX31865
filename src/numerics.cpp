@@ -4,14 +4,41 @@
 // Taken from
 // https://www.analog.com/media/en/technical-documentation/application-notes/AN709_0.pdf
 
-static constexpr float RTD_A = 3.9083e-3f;
-static constexpr float RTD_B = -5.775e-7f;
+class PT1000
+{
+  public:
+  static constexpr float RTD_A = 3.9083e-3f;
+  static constexpr float RTD_B = -5.775e-7f;
+};
+
+// TODO: get for KTY81
 static constexpr float RTD_C = -4.183e-12f;
 static constexpr float A[6] = {-242.02f,     2.2228f,    2.5859e-3f,
-                               -4.8260e-6f, -2.8183e-8f, 1.5243e-10f};
+                              -4.8260e-6f, -2.8183e-8f, 1.5243e-10f};
+
+class KTY81_210
+{
+  public:
+  static constexpr float RTD_A = 7.874e-3f;
+  static constexpr float RTD_B = 1.874e-5f;
+};
 
 float Max31865::RTDtoTemperature(uint16_t rtd,
-                                 max31865_rtd_config_t rtdConfig) {
+                                 max31865_rtd_config_t rtdConfig) 
+{
+  float RTD_A = 0.0f;
+  float RTD_B = 0.0f;
+  if(rtdConfig.sensor_type == SensorType::PT1000)
+  {
+    RTD_A = PT1000::RTD_A;
+    RTD_B = PT1000::RTD_B;
+  }
+  else if(rtdConfig.sensor_type == SensorType::KTY81_210)
+  {
+    RTD_A = KTY81_210::RTD_A;
+    RTD_B = KTY81_210::RTD_B;
+  }
+
   float Rrtd = (rtd * rtdConfig.ref) / (float)(1U << 15U);
 
   float Z1, Z2, Z3, Z4, temperature;
@@ -39,7 +66,7 @@ float Max31865::RTDtoTemperature(uint16_t rtd,
 uint16_t Max31865::temperatureToRTD(float temperature,
                                     max31865_rtd_config_t rtdConfig) {
   float Rrtd = rtdConfig.nominal *
-               (1.0 + RTD_A * temperature + RTD_B * pow(temperature, 2));
+               (1.0 + PT1000::RTD_A * temperature + PT1000::RTD_B * pow(temperature, 2));
   if (temperature < 0.0) {
     Rrtd +=
         rtdConfig.nominal * RTD_C * (temperature - 100.0) * pow(temperature, 3);
