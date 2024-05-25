@@ -69,7 +69,7 @@ class Max31865 {
 
   Max31865(int miso, int mosi, int sck, int cs, int drdy = -1,
            spi_host_device_t host = SPI2_HOST);
-  ~Max31865();
+  virtual ~Max31865();
 
   esp_err_t begin(max31865_config_t config);
   esp_err_t setConfig(max31865_config_t config);
@@ -79,8 +79,12 @@ class Max31865 {
   esp_err_t readFaultStatus(Max31865Error *fault);
   esp_err_t getRTD(uint16_t *rtd, Max31865Error *fault = nullptr);
 
+  Max31865Error getLastError() { return last_error; }
+
  private:
   static void drdyInterruptHandler(void *arg);
+
+  Max31865Error last_error = Max31865Error::NoError;
 
   int miso;
   int mosi;

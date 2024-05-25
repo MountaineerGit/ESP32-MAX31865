@@ -8,32 +8,7 @@
 
 static const char *TAG = "Max31865";
 
-const char *Max31865::errorToString(Max31865Error error) {
-  switch (error) {
-    case Max31865Error::NoError: {
-      return "No error";
-    }
-    case Max31865Error::Voltage: {
-      return "Over/under voltage fault";
-    }
-    case Max31865Error::RTDInLow: {
-      return "RTDIN- < 0.85*VBIAS (FORCE- open)";
-    }
-    case Max31865Error::RefLow: {
-      return "REFIN- < 0.85*VBIAS (FORCE- open)";
-    }
-    case Max31865Error::RefHigh: {
-      return "REFIN- > 0.85*VBIAS";
-    }
-    case Max31865Error::RTDLow: {
-      return "RTD below low threshold";
-    }
-    case Max31865Error::RTDHigh: {
-      return "RTD above high threshold";
-    }
-  }
-  return "";
-}
+
 
 void IRAM_ATTR Max31865::drdyInterruptHandler(void *arg) {
   static BaseType_t xHigherPriorityTaskWoken = pdFALSE;
@@ -53,9 +28,9 @@ Max31865::~Max31865() {
   if (err == ESP_OK) {
     gpio_uninstall_isr_service();
   } else if (err == ESP_ERR_INVALID_STATE) {
-    ESP_LOGD(TAG, "Devices still attached; not freeing the bus");
+   // ESP_LOGD(TAG, "Devices still attached; not freeing the bus");
   } else {
-    ESP_LOGE(TAG, "Error freeing bus: %s", esp_err_to_name(err));
+   // ESP_LOGE(TAG, "Error freeing bus: %s", esp_err_to_name(err));
   }
 }
 
@@ -95,9 +70,9 @@ esp_err_t Max31865::begin(max31865_config_t config) {
   esp_err_t err = spi_bus_initialize(hostDevice, &busConfig, 0);
   // INVALID_STATE means the host is already in use - that's OK
   if (err == ESP_ERR_INVALID_STATE) {
-    ESP_LOGD(TAG, "SPI bus already initialized");
+   // ESP_LOGD(TAG, "SPI bus already initialized");
   } else if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Error initialising SPI bus: %s", esp_err_to_name(err));
+    //ESP_LOGE(TAG, "Error initialising SPI bus: %s", esp_err_to_name(err));
     return err;
   }
 
@@ -111,7 +86,7 @@ esp_err_t Max31865::begin(max31865_config_t config) {
   deviceConfig.queue_size = 1;
   err = spi_bus_add_device(hostDevice, &deviceConfig, &deviceHandle);
   if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Error adding SPI device: %s", esp_err_to_name(err));
+   // ESP_LOGE(TAG, "Error adding SPI device: %s", esp_err_to_name(err));
     return err;
   }
   return setConfig(config);
@@ -142,7 +117,7 @@ esp_err_t Max31865::readSPI(uint8_t addr, uint8_t *result, size_t size) {
   esp_err_t err = spi_device_polling_transmit(deviceHandle, &transaction);
   gpio_set_level(static_cast<gpio_num_t>(cs), 1);
   if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Error sending SPI transaction: %s", esp_err_to_name(err));
+   // ESP_LOGE(TAG, "Error sending SPI transaction: %s", esp_err_to_name(err));
     return err;
   }
   memcpy(result, transaction.rx_data, size);
@@ -175,7 +150,7 @@ esp_err_t Max31865::getConfig(max31865_config_t *config) {
   uint8_t configByte = 0;
   esp_err_t err = readSPI(MAX31865_CONFIG_REG, &configByte, 1);
   if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Error reading config: %s", esp_err_to_name(err));
+   // ESP_LOGE(TAG, "Error reading config: %s", esp_err_to_name(err));
     return err;
   }
   config->vbias = ((configByte >> MAX31865_CONFIG_VBIAS_BIT) & 1U) != 0;
@@ -204,7 +179,7 @@ esp_err_t Max31865::clearFault() {
   uint8_t configByte = 0;
   esp_err_t err = readSPI(MAX31865_CONFIG_REG, &configByte, 1);
   if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Error reading config: %s", esp_err_to_name(err));
+    //ESP_LOGE(TAG, "Error reading config: %s", esp_err_to_name(err));
     return err;
   }
   configByte |= 1U << MAX31865_CONFIG_FAULTSTATUS_BIT;
@@ -216,7 +191,7 @@ esp_err_t Max31865::readFaultStatus(Max31865Error *fault) {
   uint8_t faultByte = 0;
   esp_err_t err = readSPI(MAX31865_FAULT_STATUS_REG, &faultByte, 1);
   if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Error reading fault status: %s", esp_err_to_name(err));
+   // ESP_LOGE(TAG, "Error reading fault status: %s", esp_err_to_name(err));
     return err;
   }
   if (faultByte != 0) {
@@ -244,7 +219,7 @@ esp_err_t Max31865::getRTD(uint16_t *rtd, Max31865Error *fault) {
     uint8_t configByte = 0;
     esp_err_t err = readSPI(MAX31865_CONFIG_REG, &configByte, 1);
     if (err != ESP_OK) {
-      ESP_LOGE(TAG, "Error reading config: %s", esp_err_to_name(err));
+     // ESP_LOGE(TAG, "Error reading config: %s", esp_err_to_name(err));
       return err;
     }
     configByte |= 1U << MAX31865_CONFIG_1SHOT_BIT;
@@ -272,13 +247,16 @@ esp_err_t Max31865::getRTD(uint16_t *rtd, Max31865Error *fault) {
       *fault = Max31865Error::NoError;
     }
     readFaultStatus(fault);
-    ESP_LOGW(TAG, "Sensor fault detected: %s", errorToString(*fault));
+    ESP_LOGW(TAG, "Sensor fault detected: %d", *fault); //errorToString(*fault));
+    last_error = *fault;
     return ESP_ERR_INVALID_RESPONSE;
   }
 
   *rtd = rtdBytes[0] << CHAR_BIT;
   *rtd |= rtdBytes[1];
   *rtd >>= 1U;
+
+  last_error = Max31865Error::NoError;
 
   return restoreConfig ? setConfig(oldConfig) : ESP_OK;
 }
